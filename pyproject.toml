@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vidscribe"
+version = "1.0.0"
+description = "A powerful CLI tool for transcribing YouTube videos and local video files using OpenAI Whisper"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+keywords = ["transcription", "youtube", "whisper", "video", "audio", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Multimedia :: Video",
+]
+
+dependencies = [
+    "click>=8.1.0",
+    "openai-whisper @ git+https://github.com/openai/whisper.git",
+    "ffmpeg-python>=0.2.0",
+    "yt-dlp>=2023.7.6",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "tqdm>=4.64.0",
+    "requests>=2.28.0",
+    "pyyaml>=6.0",
+    "rich>=13.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.7.0",
+    "flake8>=6.0.0",
+    "mypy>=1.4.0",
+    "isort>=5.12.0",
+    "pre-commit>=3.3.0",
+]
+
+[project.scripts]
+vidscribe = "vidscribe.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/vidscribe"
+Documentation = "https://github.com/yourusername/vidscribe/docs"
+Repository = "https://github.com/yourusername/vidscribe"
+Issues = "https://github.com/yourusername/vidscribe/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vidscribe = ["config/*.yaml"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-ra -q --strict-markers --cov=vidscribe --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["src/vidscribe"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError:",
+]

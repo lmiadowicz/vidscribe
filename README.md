@@ -1,0 +1,307 @@
+# Vidscribe
+
+[![CI](https://github.com/yourusername/vidscribe/workflows/CI/badge.svg)](https://github.com/yourusername/vidscribe/actions)
+[![codecov](https://codecov.io/gh/yourusername/vidscribe/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/vidscribe)
+[![PyPI version](https://badge.fury.io/py/vidscribe.svg)](https://badge.fury.io/py/vidscribe)
+[![Python versions](https://img.shields.io/pypi/pyversions/vidscribe.svg)](https://pypi.org/project/vidscribe/)
+
+A powerful, professional-grade CLI tool for transcribing YouTube videos and local video files using OpenAI's Whisper model. Built with modern Python best practices and designed for both individual use and integration into larger workflows.
+
+## ✨ Features
+
+- **🎬 Multiple Input Sources**: Support for YouTube URLs, local video files, playlists, and channels
+- **🎯 High-Quality Transcription**: Powered by OpenAI's state-of-the-art Whisper model
+- **📊 Multiple Output Formats**: Text, JSON, CSV, SRT subtitles, and WebVTT
+- **⚡ Efficient Processing**: Optimized batch processing for playlists and channels
+- **🔧 Configurable**: Flexible configuration system with environment variable support
+- **🎨 Beautiful CLI**: Rich terminal interface with progress bars and colored output
+- **🧪 Well-Tested**: Comprehensive test suite with high code coverage
+- **📦 Professional Structure**: Modern Python packaging with proper dependency management
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# From PyPI (recommended)
+pip install vidscribe
+
+# From source (development)
+git clone https://github.com/yourusername/vidscribe.git
+cd vidscribe
+pip install -e ".[dev]"
+```
+
+### Prerequisites
+
+**FFmpeg** is required for audio/video processing:
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt update && sudo apt install ffmpeg
+
+# Windows (using chocolatey)
+choco install ffmpeg
+```
+
+### Basic Usage
+
+```bash
+# Transcribe a YouTube video
+vidscribe transcribe "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Transcribe a local video file
+vidscribe transcribe "/path/to/video.mp4"
+
+# Process a YouTube playlist
+vidscribe playlist "https://www.youtube.com/playlist?list=PLAYLIST_ID"
+
+# Get video information
+vidscribe info "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# List available models
+vidscribe models
+```
+
+## 📖 Detailed Usage
+
+### Single Video Transcription
+
+```bash
+# Basic transcription
+vidscribe transcribe "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Save to file with specific format
+vidscribe transcribe "VIDEO_URL" -o transcription.txt -f text
+
+# Use a larger model for better accuracy
+vidscribe transcribe "VIDEO_URL" -m large
+
+# Generate subtitles
+vidscribe transcribe "VIDEO_URL" -o subtitles.srt -f srt
+
+# Transcribe in a specific language
+vidscribe transcribe "VIDEO_URL" --language es
+
+# Translate to English
+vidscribe transcribe "VIDEO_URL" --task translate
+```
+
+### Batch Processing
+
+```bash
+# Process entire playlist
+vidscribe playlist "PLAYLIST_URL" -o results.csv
+
+# Process channel with video limit
+vidscribe playlist "CHANNEL_URL" --limit 10
+
+# Use different model for batch processing
+vidscribe playlist "PLAYLIST_URL" -m small --keep-audio
+```
+
+### Configuration
+
+Create a config file at `~/.vidscribe/config.yaml`:
+
+```yaml
+model:
+  size: base
+  device: cuda  # or cpu
+
+download:
+  output_dir: ~/Downloads/vidscribe
+  keep_files: false
+
+output:
+  format: text
+  language: auto
+
+logging:
+  level: INFO
+```
+
+Use environment variables:
+
+```bash
+export VIDSCRIBE_MODEL_SIZE=large
+export VIDSCRIBE_OUTPUT_FORMAT=json
+vidscribe transcribe "VIDEO_URL"
+```
+
+## 🏗️ Architecture
+
+### Project Structure
+
+```
+vidscribe/
+├── src/vidscribe/
+│   ├── core/               # Core transcription engine
+│   │   └── engine.py
+│   ├── downloaders/        # Video download modules
+│   │   └── youtube.py
+│   ├── processors/         # Batch processing modules
+│   │   └── playlist.py
+│   ├── utils/              # Utility modules
+│   │   ├── config.py
+│   │   ├── formatters.py
+│   │   └── validators.py
+│   └── cli.py              # Command-line interface
+├── tests/
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── fixtures/           # Test fixtures
+├── docs/                   # Documentation
+├── scripts/                # Utility scripts
+└── config/                 # Default configurations
+```
+
+### Key Components
+
+- **TranscriptionEngine**: Core Whisper integration with error handling
+- **YouTubeDownloader**: Robust YouTube video downloading with fallbacks  
+- **PlaylistProcessor**: Efficient batch processing with progress tracking
+- **CLI**: Rich command-line interface built with Click
+- **Config System**: Flexible configuration with multiple sources
+
+## 🧪 Development
+
+### Setup Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/vidscribe.git
+cd vidscribe
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode
+make install-dev
+
+# Run tests
+make test
+
+# Run with coverage
+make test-cov
+
+# Format code
+make format
+
+# Lint code
+make lint
+```
+
+### Available Make Commands
+
+```bash
+make help           # Show all available commands
+make install        # Install package
+make install-dev    # Install with development dependencies
+make test           # Run unit tests
+make test-cov       # Run tests with coverage
+make lint           # Run linters (flake8, mypy)
+make format         # Format code (black, isort)
+make clean          # Remove build artifacts
+make build          # Build distribution packages
+make docs           # Generate documentation
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test modules
+pytest tests/unit/test_validators.py
+
+# Run with coverage
+pytest --cov=vidscribe --cov-report=html
+
+# Run integration tests (requires network)
+pytest tests/integration/
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass (`make test`)
+6. Format code (`make format`)
+7. Commit changes (`git commit -m 'Add amazing feature'`)
+8. Push to branch (`git push origin feature/amazing-feature`)
+9. Open a Pull Request
+
+## 📊 Model Information
+
+| Model  | Parameters | English-only | Multilingual | Required VRAM | Relative Speed |
+|--------|------------|--------------|--------------|---------------|----------------|
+| tiny   | 39M        | ✓            | ✓            | ~1 GB         | ~32x           |
+| base   | 74M        | ✓            | ✓            | ~1 GB         | ~16x           |
+| small  | 244M       | ✓            | ✓            | ~2 GB         | ~6x            |
+| medium | 769M       | ✓            | ✓            | ~5 GB         | ~2x            |
+| large  | 1550M      | -            | ✓            | ~10 GB        | 1x             |
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**FFmpeg not found**
+```bash
+# Test FFmpeg installation
+ffmpeg -version
+
+# Install FFmpeg using package manager
+# macOS: brew install ffmpeg
+# Ubuntu: sudo apt install ffmpeg
+```
+
+**Out of memory errors**
+- Use a smaller model (`-m tiny` or `-m base`)
+- Process videos individually instead of in batches
+- Ensure sufficient RAM/VRAM for chosen model
+
+**YouTube download errors**
+- Check internet connection
+- Update pytube: `pip install --upgrade pytube`
+- Some videos may be age-restricted or private
+
+**Slow transcription**
+- Use smaller model for faster processing
+- Consider GPU acceleration (install CUDA-enabled PyTorch)
+- First run downloads models (one-time delay)
+
+### Performance Tips
+
+1. **Model Selection**: Start with `base` for good speed/accuracy balance
+2. **GPU Acceleration**: Install CUDA-enabled PyTorch for GPU processing
+3. **Batch Processing**: Process multiple videos in one session to reuse loaded models
+4. **Storage**: Ensure sufficient disk space for temporary audio files
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [OpenAI Whisper](https://github.com/openai/whisper) - State-of-the-art speech recognition
+- [pytube](https://github.com/pytube/pytube) - YouTube video downloading
+- [Click](https://click.palletsprojects.com/) - Command-line interface framework
+- [Rich](https://rich.readthedocs.io/) - Beautiful terminal output
+
+## 📬 Support
+
+- **Documentation**: [Link to docs]
+- **Issues**: [GitHub Issues](https://github.com/yourusername/vidscribe/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/vidscribe/discussions)
+
+---
+
+**Made with ❤️ by the Vidscribe team**

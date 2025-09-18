@@ -1,0 +1,22 @@
+# Default configuration for Vidscribe
+
+model:
+  size: base
+  device: null  # auto-detect
+
+download:
+  output_dir: null  # use system temp directory
+  keep_files: false
+
+output:
+  format: text
+  language: null  # auto-detect
+
+processing:
+  batch_size: 1
+  max_retries: 3
+  timeout: 300  # seconds
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
