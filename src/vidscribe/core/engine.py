@@ -131,6 +131,12 @@ class TranscriptionEngine:
                 mlx_kwargs = {}
                 if language:
                     mlx_kwargs['language'] = language
+                    
+                # Check for Hugging Face token for private model access
+                hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_TOKEN')
+                if hf_token:
+                    mlx_kwargs['hf_token'] = hf_token
+                
                 # MLX doesn't support 'task' parameter directly
                 # Translation is done via different model or post-processing
                 
@@ -167,8 +173,32 @@ class TranscriptionEngine:
             return result
 
         except Exception as e:
+            error_msg = str(e)
             logger.error(f"Transcription failed: {e}")
-            raise RuntimeError(f"Failed to transcribe audio: {e}")
+            
+            # Provide specific guidance for authentication errors
+            if "401" in error_msg or "Authorization" in error_msg or "credentials" in error_msg:
+                auth_msg = (
+                    f"Authentication failed for Hugging Face model. "
+                    f"Please set your Hugging Face token as an environment variable:\n"
+                    f"export HF_TOKEN=your_token_here\n"
+                    f"or\n"
+                    f"export HUGGINGFACE_TOKEN=your_token_here\n"
+                    f"You can get a token from https://huggingface.co/settings/tokens"
+                )
+                logger.error(auth_msg)
+                raise RuntimeError(f"Failed to transcribe audio: {auth_msg}")
+            elif "Repository Not Found" in error_msg:
+                repo_msg = (
+                    f"Model repository not found. This may be due to:\n"
+                    f"1. Missing authentication (set HF_TOKEN environment variable)\n"
+                    f"2. Model repository doesn't exist or is private\n"
+                    f"3. Network connectivity issues"
+                )
+                logger.error(repo_msg)
+                raise RuntimeError(f"Failed to transcribe audio: {repo_msg}")
+            else:
+                raise RuntimeError(f"Failed to transcribe audio: {e}")
 
     def transcribe_video(
         self,

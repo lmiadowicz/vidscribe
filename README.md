@@ -71,6 +71,32 @@ choco install ffmpeg
 
 **Apple Silicon Optimization**: MLX acceleration provides ~50% speed improvement on M1/M2/M3 Macs and is automatically detected when installed.
 
+### MLX Setup for Apple Silicon
+
+For optimal performance on Apple Silicon Macs, install MLX Whisper:
+
+```bash
+# Install MLX Whisper for Apple Silicon acceleration
+pip install mlx-whisper
+
+# Or use the Mac-specific requirements
+pip install -r requirements-mac.txt
+```
+
+**Important**: MLX models require Hugging Face authentication. Set up your environment:
+
+1. **Get a Hugging Face token**: Visit [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+2. **Copy the example environment file**:
+   ```bash
+   cp .env.example .env
+   ```
+3. **Edit `.env` and add your token**:
+   ```bash
+   HF_TOKEN=your_actual_token_here
+   ```
+
+Without authentication, you'll get 401 errors when using MLX models.
+
 ### Basic Usage
 
 ```bash
@@ -176,6 +202,30 @@ vidscribe playlist "PLAYLIST_URL" -m small --keep-audio
 
 ### Configuration
 
+Vidscribe supports multiple configuration methods:
+
+#### Environment Variables (.env file)
+
+Copy the example environment file and customize it:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your settings:
+
+```bash
+# Required for MLX on Apple Silicon
+HF_TOKEN=your_huggingface_token_here
+
+# Optional configuration overrides
+VIDSCRIBE_MODEL_SIZE=base
+VIDSCRIBE_OUTPUT_FORMAT=text
+VIDSCRIBE_USE_MLX=true
+```
+
+#### YAML Configuration File
+
 Create a config file at `~/.vidscribe/config.yaml`:
 
 ```yaml
@@ -195,11 +245,12 @@ logging:
   level: INFO
 ```
 
-Use environment variables:
+#### Command Line Environment Variables
 
 ```bash
 export VIDSCRIBE_MODEL_SIZE=large
 export VIDSCRIBE_OUTPUT_FORMAT=json
+export HF_TOKEN=your_token_here
 vidscribe transcribe "VIDEO_URL"
 ```
 
@@ -343,6 +394,15 @@ ffmpeg -version
 - Check internet connection
 - Update pytube: `pip install --upgrade pytube`
 - Some videos may be age-restricted or private
+
+**MLX Authentication errors (Apple Silicon)**
+```bash
+# Error: 401 Client Error / Repository Not Found
+# Solution: Set up Hugging Face authentication
+cp .env.example .env
+# Edit .env and add: HF_TOKEN=your_token_here
+# Get token from: https://huggingface.co/settings/tokens
+```
 
 **Slow transcription**
 - Use smaller model for faster processing
