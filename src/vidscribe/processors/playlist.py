@@ -26,7 +26,8 @@ class PlaylistProcessor:
         self,
         model_size: str = "base",
         keep_audio: bool = False,
-        output_dir: Optional[str] = None
+        output_dir: Optional[str] = None,
+        use_mlx: Optional[bool] = None
     ):
         """
         Initialize the playlist processor.
@@ -35,6 +36,7 @@ class PlaylistProcessor:
             model_size: Whisper model size
             keep_audio: Keep downloaded audio files
             output_dir: Directory for temporary files
+            use_mlx: Force MLX usage (True), disable MLX (False), or auto-detect (None)
         """
         self.model_size = model_size
         self.keep_audio = keep_audio
@@ -42,7 +44,7 @@ class PlaylistProcessor:
 
         # Initialize components
         self.downloader = YouTubeDownloader(output_dir=output_dir, keep_files=keep_audio)
-        self.engine = TranscriptionEngine(model_size=model_size)
+        self.engine = TranscriptionEngine(model_size=model_size, use_mlx=use_mlx)
 
         # Track processing stats
         self.stats = {

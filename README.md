@@ -12,7 +12,7 @@ A powerful, professional-grade CLI tool for transcribing YouTube videos and loca
 - **🎬 Multiple Input Sources**: Support for YouTube URLs, local video files, playlists, and channels
 - **🎯 High-Quality Transcription**: Powered by OpenAI's state-of-the-art Whisper model
 - **📊 Multiple Output Formats**: Text, JSON, CSV, SRT subtitles, and WebVTT
-- **⚡ Efficient Processing**: Optimized batch processing for playlists and channels
+- **⚡ Efficient Processing**: Optimized batch processing with MLX support for Apple Silicon
 - **🔧 Configurable**: Flexible configuration system with environment variable support
 - **🎨 Beautiful CLI**: Rich terminal interface with progress bars and colored output
 - **🧪 Well-Tested**: Comprehensive test suite with high code coverage
@@ -25,6 +25,9 @@ A powerful, professional-grade CLI tool for transcribing YouTube videos and loca
 ```bash
 # Using pip with requirements.txt
 pip install -r requirements.txt
+
+# (Optional) For Apple Silicon Mac users - 50% faster transcription
+pip install -r requirements-mac.txt
 
 # Or install as a package with all dependencies
 pip install -e .
@@ -62,14 +65,20 @@ choco install ffmpeg
    - OpenAI Whisper (installed from GitHub)
    - PyTorch (for running the model)
    - All necessary audio processing libraries
+   - (Optional) MLX support for Apple Silicon acceleration
 
 **Note**: First run will download the Whisper model (~140MB for base model) which is a one-time setup.
+
+**Apple Silicon Optimization**: MLX acceleration provides ~50% speed improvement on M1/M2/M3 Macs and is automatically detected when installed.
 
 ### Basic Usage
 
 ```bash
 # Transcribe a YouTube video
 vidscribe transcribe "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Use MLX acceleration on Apple Silicon (auto-detected)
+vidscribe transcribe "VIDEO_URL" --use-mlx
 
 # Transcribe a local video file
 vidscribe transcribe "/path/to/video.mp4"
@@ -111,6 +120,24 @@ When using `--keep-audio`, the tool will:
 - The audio files are preserved after transcription completes
 
 ## 📖 Detailed Usage
+
+### Apple Silicon Acceleration
+
+On Apple Silicon Macs, vidscribe automatically uses MLX for faster transcription when available:
+
+```bash
+# Auto-detect and use MLX if available (default)
+vidscribe transcribe "VIDEO_URL"
+
+# Force MLX usage
+vidscribe transcribe "VIDEO_URL" --use-mlx
+
+# Disable MLX (use standard Whisper)
+vidscribe transcribe "VIDEO_URL" --no-mlx
+
+# Check backend in verbose mode
+vidscribe transcribe "VIDEO_URL" -v  # Shows "MLX" or "Whisper" backend
+```
 
 ### Single Video Transcription
 
@@ -205,7 +232,7 @@ vidscribe/
 
 ### Key Components
 
-- **TranscriptionEngine**: Core Whisper integration with error handling
+- **TranscriptionEngine**: Core Whisper/MLX integration with automatic backend selection
 - **YouTubeDownloader**: Robust YouTube video downloading with fallbacks  
 - **PlaylistProcessor**: Efficient batch processing with progress tracking
 - **CLI**: Rich command-line interface built with Click

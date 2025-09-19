@@ -3,16 +3,34 @@
 import json
 import logging
 import os
+import platform
 import tempfile
 import time
 from pathlib import Path
 from typing import Dict, Optional, Any
 
 import ffmpeg
-import whisper
 
 from vidscribe.utils.formatters import SubtitleFormatter
 from vidscribe.utils.validators import validate_file_path
+
+# Platform detection for MLX support
+is_mac_silicon = platform.system() == "Darwin" and platform.machine() == "arm64"
+mlx_available = False
+
+if is_mac_silicon:
+    try:
+        import mlx_whisper
+        mlx_available = True
+    except ImportError:
+        pass
+
+# Always try to import standard whisper as fallback
+try:
+    import whisper
+    whisper_available = True
+except ImportError:
+    whisper_available = False
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +40,22 @@ class TranscriptionEngine:
 
     SUPPORTED_MODELS = ["tiny", "base", "small", "medium", "large"]
     SUPPORTED_FORMATS = ["text", "json", "csv", "srt", "vtt"]
+    MLX_MODEL_MAP = {
+        "tiny": "mlx-community/whisper-tiny",
+        "base": "mlx-community/whisper-base",
+        "small": "mlx-community/whisper-small",
+        "medium": "mlx-community/whisper-medium",
+        "large": "mlx-community/whisper-large-v3",
+    }
 
-    def __init__(self, model_size: str = "base", device: Optional[str] = None):
+    def __init__(self, model_size: str = "base", device: Optional[str] = None, use_mlx: Optional[bool] = None):
         """
         Initialize the transcription engine.
 
         Args:
             model_size: Whisper model size (tiny, base, small, medium, large)
             device: Device to use for inference (cpu, cuda, or None for auto)
+            use_mlx: Force MLX usage (True), disable MLX (False), or auto-detect (None)
         """
         if model_size not in self.SUPPORTED_MODELS:
             raise ValueError(f"Invalid model size. Must be one of {self.SUPPORTED_MODELS}")
@@ -37,17 +63,42 @@ class TranscriptionEngine:
         self.model_size = model_size
         self.device = device
         self.model = None
+        
+        # Determine which backend to use
+        if use_mlx is None:
+            # Auto-detect: use MLX if available on Apple Silicon
+            self.use_mlx = mlx_available and is_mac_silicon
+        else:
+            self.use_mlx = use_mlx and mlx_available
+        
+        # Fallback to standard whisper if MLX not available but requested
+        if use_mlx and not mlx_available:
+            logger.warning("MLX requested but not available. Install with: pip install mlx-whisper")
+            self.use_mlx = False
+        
+        # Ensure we have at least one backend available
+        if not self.use_mlx and not whisper_available:
+            raise RuntimeError("No transcription backend available. Install whisper or mlx-whisper.")
+        
         self._load_model()
 
     def _load_model(self) -> None:
         """Load the Whisper model."""
-        logger.info(f"Loading Whisper model: {self.model_size}")
+        backend = "MLX" if self.use_mlx else "Whisper"
+        logger.info(f"Loading {backend} model: {self.model_size}")
+        
         try:
-            self.model = whisper.load_model(self.model_size, device=self.device)
-            logger.info("Model loaded successfully")
+            if self.use_mlx:
+                # MLX doesn't preload models, they're loaded on first transcribe
+                # Store the model path for MLX
+                self.mlx_model_path = self.MLX_MODEL_MAP.get(self.model_size)
+                logger.info(f"MLX model configured: {self.mlx_model_path}")
+            else:
+                self.model = whisper.load_model(self.model_size, device=self.device)
+                logger.info("Standard Whisper model loaded successfully")
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
-            raise RuntimeError(f"Failed to load Whisper model: {e}")
+            raise RuntimeError(f"Failed to load {backend} model: {e}")
 
     def transcribe_audio(
         self,
@@ -69,18 +120,38 @@ class TranscriptionEngine:
             Transcription result with text and metadata
         """
         validate_file_path(audio_path)
-        logger.info(f"Transcribing audio: {audio_path}")
+        backend = "MLX" if self.use_mlx else "Whisper"
+        logger.info(f"Transcribing audio with {backend}: {audio_path}")
 
         start_time = time.time()
 
         try:
-            result = self.model.transcribe(
-                audio_path,
-                language=language,
-                task=task,
-                verbose=False,
-                **kwargs
-            )
+            if self.use_mlx:
+                # MLX transcription
+                mlx_kwargs = {}
+                if language:
+                    mlx_kwargs['language'] = language
+                # MLX doesn't support 'task' parameter directly
+                # Translation is done via different model or post-processing
+                
+                result = mlx_whisper.transcribe(
+                    audio_path,
+                    path_or_hf_repo=self.mlx_model_path,
+                    **mlx_kwargs
+                )
+                
+                # Normalize MLX output to match whisper format
+                if task == "translate" and language != "en":
+                    logger.warning("MLX translation to English requested - using transcription")
+            else:
+                # Standard Whisper transcription
+                result = self.model.transcribe(
+                    audio_path,
+                    language=language,
+                    task=task,
+                    verbose=False,
+                    **kwargs
+                )
 
             transcription_time = time.time() - start_time
 
@@ -89,9 +160,10 @@ class TranscriptionEngine:
                 "audio_file": audio_path,
                 "model_size": self.model_size,
                 "task": task,
+                "backend": backend,
             })
 
-            logger.info(f"Transcription completed in {transcription_time:.2f} seconds")
+            logger.info(f"Transcription completed in {transcription_time:.2f} seconds using {backend}")
             return result
 
         except Exception as e:

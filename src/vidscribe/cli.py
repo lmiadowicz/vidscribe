@@ -74,6 +74,11 @@ def cli(ctx: click.Context, version: bool, verbose: bool, config: Optional[str])
     help="Whisper model size"
 )
 @click.option(
+    "--use-mlx/--no-mlx",
+    default=None,
+    help="Use MLX acceleration on Apple Silicon (auto-detects by default)"
+)
+@click.option(
     "-f", "--format",
     type=click.Choice(["text", "json", "csv", "srt", "vtt"]),
     default="text",
@@ -101,6 +106,7 @@ def transcribe(
     input: str,
     output: Optional[str],
     model: str,
+    use_mlx: Optional[bool],
     format: str,
     language: Optional[str],
     task: str,
@@ -115,7 +121,7 @@ def transcribe(
 
     with console.status("[bold green]Initializing...") as status:
         # Initialize transcription engine
-        engine = TranscriptionEngine(model_size=model)
+        engine = TranscriptionEngine(model_size=model, use_mlx=use_mlx)
 
         # Check if input is a YouTube URL
         if is_youtube_url(input):
@@ -197,6 +203,11 @@ def transcribe(
     help="Whisper model size"
 )
 @click.option(
+    "--use-mlx/--no-mlx",
+    default=None,
+    help="Use MLX acceleration on Apple Silicon (auto-detects by default)"
+)
+@click.option(
     "--limit",
     type=int,
     help="Maximum number of videos to process"
@@ -212,6 +223,7 @@ def playlist(
     url: str,
     output: str,
     model: str,
+    use_mlx: Optional[bool],
     limit: Optional[int],
     keep_audio: bool
 ) -> None:
@@ -229,7 +241,7 @@ def playlist(
         sys.exit(1)
 
     # Initialize processor
-    processor = PlaylistProcessor(model_size=model, keep_audio=keep_audio)
+    processor = PlaylistProcessor(model_size=model, keep_audio=keep_audio, use_mlx=use_mlx)
 
     # Determine if it's a playlist or channel
     if "playlist" in url or "list=" in url:

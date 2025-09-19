@@ -1,0 +1,4 @@
+# Additional requirements for macOS users with Apple Silicon
+# Install with: pip install -r requirements-mac.txt
+
+mlx-whisper>=0.2.0
