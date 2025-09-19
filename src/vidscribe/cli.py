@@ -127,8 +127,8 @@ def cli(ctx: click.Context, version: bool, verbose: bool, config: Optional[str])
 )
 @click.option(
     "--use-mlx/--no-mlx",
-    default=None,
-    help="Use MLX acceleration on Apple Silicon (auto-detects by default)"
+    default=False,
+    help="Use MLX acceleration on Apple Silicon (disabled by default)"
 )
 @click.option(
     "-f", "--format",
@@ -301,8 +301,8 @@ def transcribe(
 )
 @click.option(
     "--use-mlx/--no-mlx",
-    default=None,
-    help="Use MLX acceleration on Apple Silicon (auto-detects by default)"
+    default=False,
+    help="Use MLX acceleration on Apple Silicon (disabled by default)"
 )
 @click.option(
     "--limit",
