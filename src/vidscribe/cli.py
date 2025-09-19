@@ -39,9 +39,61 @@ def setup_logging(verbose: bool = False) -> None:
 @click.option("--config", type=click.Path(exists=True), help="Path to config file.")
 def cli(ctx: click.Context, version: bool, verbose: bool, config: Optional[str]) -> None:
     """
-    Vidscribe - Video Transcription CLI Tool.
-
-    Transcribe YouTube videos and local video files using OpenAI Whisper.
+    \b
+    🎬 Vidscribe - Professional Video Transcription CLI Tool
+    
+    Powered by OpenAI Whisper with MLX acceleration for Apple Silicon.
+    Transcribe YouTube videos, playlists, channels, and local video files.
+    
+    \b
+    🚀 CORE CAPABILITIES:
+    • YouTube Videos: Single video transcription with metadata
+    • YouTube Playlists: Batch process entire playlists
+    • YouTube Channels: Process channel videos with limits
+    • Local Videos: MP4, AVI, MOV, MKV, WebM support
+    • Local Audio: Direct audio file transcription
+    • Multiple Models: tiny, base, small, medium, large
+    • Output Formats: text, JSON, CSV, SRT subtitles, WebVTT
+    • MLX Acceleration: 50% faster on Apple Silicon (auto-detected)
+    • Batch Processing: Efficient playlist/channel processing
+    • Multi-language: 99+ languages supported
+    • Translation: Translate any language to English
+    
+    \b
+    📖 QUICK EXAMPLES:
+    
+    # Transcribe YouTube video
+    vidscribe transcribe "https://youtu.be/VIDEO_ID"
+    
+    # Process playlist with better model
+    vidscribe playlist "https://youtube.com/playlist?list=ID" -m large
+    
+    # Local video with subtitles
+    vidscribe transcribe video.mp4 -o subtitles.srt -f srt
+    
+    # Get video info
+    vidscribe info "https://youtu.be/VIDEO_ID"
+    
+    # List available models
+    vidscribe models
+    
+    \b
+    ⚡ PERFORMANCE FEATURES:
+    • Auto-detects MLX acceleration on Apple Silicon
+    • Configurable model sizes (tiny=32x faster, large=highest accuracy)
+    • Progress tracking with rich terminal output
+    • Automatic audio extraction from videos
+    • Optimized batch processing for playlists
+    
+    \b
+    📁 OUTPUT FORMATS:
+    • text: Plain text transcription
+    • json: Full metadata + transcription
+    • csv: Spreadsheet-compatible format
+    • srt: Standard subtitle format
+    • vtt: WebVTT subtitle format
+    
+    Use 'vidscribe COMMAND --help' for detailed command options.
     """
     if version:
         console.print(f"vidscribe version {__version__}")
@@ -113,9 +165,54 @@ def transcribe(
     keep_audio: bool
 ) -> None:
     """
-    Transcribe a video or audio file.
-
-    INPUT can be a YouTube URL or a local file path.
+    \b
+    🎥 Transcribe a single video or audio file.
+    
+    INPUT can be a YouTube URL, local video file, or audio file.
+    
+    \b
+    📋 EXAMPLES:
+    
+    # Basic YouTube video transcription
+    vidscribe transcribe "https://youtu.be/dQw4w9WgXcQ"
+    
+    # Save to file with specific format
+    vidscribe transcribe "VIDEO_URL" -o transcript.txt -f text
+    
+    # Generate SRT subtitles
+    vidscribe transcribe "VIDEO_URL" -o subs.srt -f srt
+    
+    # Use larger model for better accuracy
+    vidscribe transcribe "VIDEO_URL" -m large
+    
+    # Force MLX acceleration (Apple Silicon)
+    vidscribe transcribe "VIDEO_URL" --use-mlx
+    
+    # Transcribe Spanish video in Spanish
+    vidscribe transcribe "VIDEO_URL" --language es
+    
+    # Translate any language to English
+    vidscribe transcribe "VIDEO_URL" --task translate
+    
+    # Local video file with audio preservation
+    vidscribe transcribe "/path/video.mp4" --keep-audio
+    
+    # JSON output with full metadata
+    vidscribe transcribe "VIDEO_URL" -o data.json -f json
+    
+    \b
+    🔧 MODEL SIZES:
+    • tiny: 32x faster, good for quick drafts
+    • base: 16x faster, good balance (default)
+    • small: 6x faster, better accuracy
+    • medium: 2x faster, high accuracy
+    • large: Best accuracy, slower
+    
+    \b
+    🌍 SUPPORTED LANGUAGES:
+    Supports 99+ languages including: English (en), Spanish (es), 
+    French (fr), German (de), Italian (it), Portuguese (pt), 
+    Russian (ru), Japanese (ja), Chinese (zh), Korean (ko), etc.
     """
     logger = logging.getLogger(__name__)
 
@@ -228,9 +325,46 @@ def playlist(
     keep_audio: bool
 ) -> None:
     """
-    Transcribe all videos from a YouTube playlist or channel.
-
-    URL should be a YouTube playlist or channel URL.
+    \b
+    📃 Transcribe all videos from a YouTube playlist or channel.
+    
+    Efficiently processes multiple videos with progress tracking and
+    automatic resumption. Results saved to CSV format by default.
+    
+    \b
+    📋 EXAMPLES:
+    
+    # Process entire playlist
+    vidscribe playlist "https://youtube.com/playlist?list=PLxxxxxx"
+    
+    # Custom output file and model
+    vidscribe playlist "PLAYLIST_URL" -o results.csv -m medium
+    
+    # Process channel with video limit
+    vidscribe playlist "https://youtube.com/@channel" --limit 10
+    
+    # Keep all downloaded audio files
+    vidscribe playlist "PLAYLIST_URL" --keep-audio
+    
+    # Use MLX acceleration for faster processing
+    vidscribe playlist "PLAYLIST_URL" --use-mlx -m small
+    
+    \b
+    🎯 SUPPORTED URL TYPES:
+    • Playlist URLs: /playlist?list=PLxxxxxx
+    • Channel URLs: /@channelname or /channel/UCxxxxxx
+    • User URLs: /user/username
+    
+    \b
+    📊 OUTPUT FORMAT:
+    CSV file with columns: Title, URL, Duration, Transcription, Error
+    Each row contains one video's complete transcription data.
+    
+    \b
+    ⚡ PERFORMANCE TIPS:
+    • Use 'tiny' or 'base' models for faster batch processing
+    • Enable MLX acceleration on Apple Silicon (--use-mlx)
+    • Use --limit for testing on large channels
     """
     logger = logging.getLogger(__name__)
 
@@ -258,9 +392,35 @@ def playlist(
 @click.argument("url", type=str)
 def info(url: str) -> None:
     """
-    Get information about a YouTube video.
-
-    URL should be a YouTube video URL.
+    \b
+    ℹ️ Get detailed information about a YouTube video.
+    
+    Retrieves metadata without downloading or transcribing.
+    Useful for checking video details before processing.
+    
+    \b
+    📋 EXAMPLES:
+    
+    # Get video information
+    vidscribe info "https://youtu.be/dQw4w9WgXcQ"
+    
+    # Check video details before transcription
+    vidscribe info "https://youtube.com/watch?v=VIDEO_ID"
+    
+    \b
+    📊 DISPLAYED INFORMATION:
+    • Title: Video title
+    • Author: Channel name
+    • Duration: Video length in seconds
+    • Views: View count
+    • Video ID: YouTube video identifier
+    • URL: Full YouTube URL
+    
+    \b
+    💡 USE CASES:
+    • Verify video accessibility before transcription
+    • Check video duration for processing time estimates
+    • Confirm correct video before batch processing
     """
     try:
         validate_youtube_url(url)
@@ -292,7 +452,34 @@ def info(url: str) -> None:
 
 @cli.command()
 def models() -> None:
-    """List available Whisper models."""
+    """
+    \b
+    🤖 List all available Whisper models with detailed specifications.
+    
+    Shows model sizes, performance characteristics, and memory requirements
+    to help choose the best model for your needs.
+    
+    \b
+    📋 EXAMPLES:
+    
+    # Show all available models
+    vidscribe models
+    
+    \b
+    🎯 MODEL SELECTION GUIDE:
+    • tiny: Quick drafts, testing, low-resource environments
+    • base: General use, good balance of speed/accuracy (recommended)
+    • small: Better accuracy when you have more time/resources
+    • medium: High accuracy for important transcriptions
+    • large: Maximum accuracy for critical/professional use
+    
+    \b
+    ⚡ PERFORMANCE NOTES:
+    • Speed is relative to 'large' model baseline
+    • VRAM requirements are approximate
+    • MLX acceleration (Apple Silicon) reduces memory usage
+    • First run downloads models (one-time ~140MB-1.5GB per model)
+    """
     table = Table(title="Available Whisper Models")
     table.add_column("Model", style="cyan")
     table.add_column("Parameters")
