@@ -47,6 +47,8 @@ sudo apt update && sudo apt install ffmpeg
 choco install ffmpeg
 ```
 
+**Note on MLX and Ollama**: This project currently uses OpenAI's Whisper model for transcription and does not require MLX or Ollama configuration. The transcription runs entirely through Whisper's built-in functionality.
+
 ### Basic Usage
 
 ```bash
@@ -65,6 +67,32 @@ vidscribe info "https://www.youtube.com/watch?v=VIDEO_ID"
 # List available models
 vidscribe models
 ```
+
+### Dumping Video to File
+
+To download and save videos locally (with optional transcription), you can use the following approaches:
+
+```bash
+# Download YouTube video and keep the audio file
+vidscribe transcribe "https://www.youtube.com/watch?v=VIDEO_ID" --keep-audio -o output.txt
+
+# Process local video and extract audio
+vidscribe transcribe "/path/to/video.mp4" --keep-audio -o transcript.txt
+
+# Download playlist videos and keep all audio files
+vidscribe playlist "https://www.youtube.com/playlist?list=PLAYLIST_ID" --keep-audio
+
+# Save transcription in different formats
+vidscribe transcribe "VIDEO_URL" -o output.json -f json  # JSON format
+vidscribe transcribe "VIDEO_URL" -o output.csv -f csv    # CSV format
+vidscribe transcribe "VIDEO_URL" -o output.srt -f srt    # Subtitle format
+vidscribe transcribe "VIDEO_URL" -o output.vtt -f vtt    # WebVTT format
+```
+
+When using `--keep-audio`, the tool will:
+- For YouTube videos: Download and save the audio file in the current directory
+- For local videos: Extract and save the audio as an MP3 file
+- The audio files are preserved after transcription completes
 
 ## 📖 Detailed Usage
 
