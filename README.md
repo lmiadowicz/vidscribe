@@ -23,7 +23,16 @@ A powerful, professional-grade CLI tool for transcribing YouTube videos and loca
 ### Installation
 
 ```bash
-# From PyPI (recommended)
+# Using pip with requirements.txt
+pip install -r requirements.txt
+
+# Or install as a package with all dependencies
+pip install -e .
+
+# For development (includes testing and linting tools)
+pip install -r requirements-dev.txt
+
+# From PyPI (when published)
 pip install vidscribe
 
 # From source (development)
@@ -34,7 +43,9 @@ pip install -e ".[dev]"
 
 ### Prerequisites
 
-**FFmpeg** is required for audio/video processing:
+1. **Python 3.8+** is required
+
+2. **FFmpeg** is required for audio/video processing:
 
 ```bash
 # macOS
@@ -47,7 +58,12 @@ sudo apt update && sudo apt install ffmpeg
 choco install ffmpeg
 ```
 
-**Note on MLX and Ollama**: This project currently uses OpenAI's Whisper model for transcription and does not require MLX or Ollama configuration. The transcription runs entirely through Whisper's built-in functionality.
+3. **OpenAI Whisper** will be automatically installed with dependencies. The package includes:
+   - OpenAI Whisper (installed from GitHub)
+   - PyTorch (for running the model)
+   - All necessary audio processing libraries
+
+**Note**: First run will download the Whisper model (~140MB for base model) which is a one-time setup.
 
 ### Basic Usage
 
