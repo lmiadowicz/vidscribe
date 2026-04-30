@@ -207,36 +207,32 @@ class YouTubeDownloader:
         Returns:
             List of video URLs
         """
-        try:
-            logger.info(f"Fetching channel: {channel_url}")
+        logger.info(f"Fetching channel: {channel_url}")
 
+        url = channel_url.rstrip('/')
+        if not url.endswith('/videos'):
+            url = f"{url}/videos"
+
+        try:
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': True,
+                'lazy_playlist': False,
             }
-
-            # Always use /videos tab to get all uploads, not just the featured homepage
-            url = channel_url.rstrip('/')
-            if not url.endswith('/videos'):
-                url = f"{url}/videos"
-
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                
-                if 'entries' in info:
-                    video_urls = [f"https://www.youtube.com/watch?v={entry['id']}" 
-                                 for entry in info['entries'] if entry]
-                    
-                    if limit:
-                        video_urls = video_urls[:limit]
-                    
-                    logger.info(f"Found {len(video_urls)} videos in channel")
-                    return video_urls
-                else:
+                if 'entries' not in info:
                     logger.error("No entries found in channel")
                     return []
-                    
+                video_urls = [
+                    f"https://www.youtube.com/watch?v={entry['id']}"
+                    for entry in info['entries'] if entry
+                ]
+                if limit:
+                    video_urls = video_urls[:limit]
+                logger.info(f"Found {len(video_urls)} videos in channel")
+                return video_urls
         except Exception as e:
             logger.error(f"Error fetching channel: {e}")
             return []
