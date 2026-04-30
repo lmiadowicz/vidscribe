@@ -209,18 +209,18 @@ class YouTubeDownloader:
         """
         try:
             logger.info(f"Fetching channel: {channel_url}")
-            
+
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': True,
             }
-            
-            # Add limit to URL if specified
-            url = channel_url
-            if limit:
-                url = f"{channel_url}/videos"
-            
+
+            # Always use /videos tab to get all uploads, not just the featured homepage
+            url = channel_url.rstrip('/')
+            if not url.endswith('/videos'):
+                url = f"{url}/videos"
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 
