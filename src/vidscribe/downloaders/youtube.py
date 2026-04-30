@@ -220,51 +220,70 @@ class YouTubeDownloader:
             url = f"{url}/videos"
 
         try:
-            ydl_opts = {
+            # Flat extraction to get the full list of video IDs quickly.
+            flat_opts = {
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': True,
                 'lazy_playlist': False,
             }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with yt_dlp.YoutubeDL(flat_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 if 'entries' not in info:
                     logger.error("No entries found in channel")
                     return []
-                entries = [e for e in info['entries'] if e]
-                logger.info(f"Fetched {len(entries)} total videos from channel")
+                flat_entries = [e for e in info['entries'] if e]
+                logger.info(f"Fetched {len(flat_entries)} total videos from channel")
 
-                if since_date:
-                    filtered = []
-                    skipped_old = 0
-                    skipped_no_date = 0
-                    for entry in entries:
-                        upload_date = entry.get('upload_date')
-                        if not upload_date:
-                            # Cannot determine publish date — exclude to avoid processing old content
-                            skipped_no_date += 1
-                        elif upload_date >= since_date:
-                            filtered.append(entry)
-                        else:
-                            skipped_old += 1
-                    logger.info(
-                        f"Date filter ({since_date}): kept {len(filtered)}, "
-                        f"skipped {skipped_old} older, {skipped_no_date} without date"
-                    )
-                    entries = filtered
-
+            if not since_date:
                 videos = [
                     {
-                        'url': f"https://www.youtube.com/watch?v={entry['id']}",
-                        'upload_date': entry.get('upload_date', ''),
-                        'title': entry.get('title', ''),
+                        'url': f"https://www.youtube.com/watch?v={e['id']}",
+                        'upload_date': e.get('upload_date', ''),
+                        'title': e.get('title', ''),
                     }
-                    for entry in entries
+                    for e in flat_entries
                 ]
                 if limit:
                     videos = videos[:limit]
                 logger.info(f"Returning {len(videos)} videos")
                 return videos
+
+            # YouTube doesn't expose upload dates in its channel listing API (flat mode
+            # returns null timestamps). Fetch per-video metadata from newest to oldest
+            # and stop as soon as we reach a video older than since_date.
+            logger.info(f"Fetching video dates (channels are newest-first, stopping at {since_date})...")
+            videos = []
+            meta_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'ignoreerrors': True,
+            }
+            with yt_dlp.YoutubeDL(meta_opts) as ydl:
+                for i, entry in enumerate(flat_entries):
+                    video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+                    video_info = ydl.extract_info(video_url, download=False)
+                    if not video_info:
+                        continue
+                    upload_date = video_info.get('upload_date')
+                    if not upload_date:
+                        continue
+                    if upload_date < since_date:
+                        logger.info(
+                            f"Video at position {i + 1} has date {upload_date} "
+                            f"before cutoff {since_date}, stopping"
+                        )
+                        break
+                    videos.append({
+                        'url': video_url,
+                        'upload_date': upload_date,
+                        'title': video_info.get('title', entry.get('title', '')),
+                    })
+                    if limit and len(videos) >= limit:
+                        break
+
+            logger.info(f"Returning {len(videos)} videos since {since_date}")
+            return videos
         except Exception as e:
             logger.error(f"Error fetching channel: {e}")
             return []
