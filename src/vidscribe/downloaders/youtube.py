@@ -3,6 +3,7 @@
 import logging
 import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from urllib.parse import parse_qs, urlparse
@@ -249,37 +250,91 @@ class YouTubeDownloader:
                 logger.info(f"Returning {len(videos)} videos")
                 return videos
 
-            # YouTube doesn't expose upload dates in its channel listing API (flat mode
-            # returns null timestamps). Fetch per-video metadata from newest to oldest
-            # and stop as soon as we reach a video older than since_date.
-            logger.info(f"Fetching video dates (channels are newest-first, stopping at {since_date})...")
-            videos = []
+            # Check if flat entries already include upload_date (modern yt-dlp versions
+            # sometimes include it). If so, filter without extra network requests.
+            if flat_entries and flat_entries[0].get('upload_date'):
+                logger.info("Flat entries include upload_date, filtering without extra fetches")
+                videos = [
+                    {
+                        'url': f"https://www.youtube.com/watch?v={e['id']}",
+                        'upload_date': e['upload_date'],
+                        'title': e.get('title', ''),
+                    }
+                    for e in flat_entries
+                    if e.get('upload_date', '') >= since_date
+                ]
+                if limit:
+                    videos = videos[:limit]
+                logger.info(f"Returning {len(videos)} videos since {since_date}")
+                return videos
+
+            # Flat entries lack dates — fetch per-video metadata concurrently.
+            # Channel listing is newest-first so we can stop once we've seen enough old videos.
+            logger.info(
+                f"Fetching video dates concurrently (stopping at {since_date}), "
+                f"{len(flat_entries)} videos to check..."
+            )
+
             meta_opts = {
                 'quiet': True,
                 'no_warnings': True,
                 'ignoreerrors': True,
             }
-            with yt_dlp.YoutubeDL(meta_opts) as ydl:
-                for i, entry in enumerate(flat_entries):
-                    video_url = f"https://www.youtube.com/watch?v={entry['id']}"
-                    video_info = ydl.extract_info(video_url, download=False)
-                    if not video_info:
-                        continue
-                    upload_date = video_info.get('upload_date')
+
+            def _fetch_meta(entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+                video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+                try:
+                    with yt_dlp.YoutubeDL(meta_opts) as ydl:
+                        info = ydl.extract_info(video_url, download=False)
+                    if not info:
+                        return None
+                    upload_date = info.get('upload_date')
                     if not upload_date:
-                        continue
-                    if upload_date < since_date:
-                        logger.info(
-                            f"Video at position {i + 1} has date {upload_date} "
-                            f"before cutoff {since_date}, stopping"
-                        )
-                        break
-                    videos.append({
+                        return None
+                    return {
                         'url': video_url,
                         'upload_date': upload_date,
-                        'title': video_info.get('title', entry.get('title', '')),
-                    })
+                        'title': info.get('title', entry.get('title', '')),
+                    }
+                except Exception:
+                    return None
+
+            # Process in batches so we can short-circuit once we've passed the cutoff.
+            # Channels are newest-first, so once a batch contains only old videos we stop.
+            BATCH_SIZE = 20
+            MAX_WORKERS = 8
+            videos: List[Dict[str, Any]] = []
+            done = False
+
+            for batch_start in range(0, len(flat_entries), BATCH_SIZE):
+                if done:
+                    break
+                batch = flat_entries[batch_start: batch_start + BATCH_SIZE]
+                batch_results: List[Optional[Dict[str, Any]]] = [None] * len(batch)
+
+                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+                    future_to_idx = {
+                        pool.submit(_fetch_meta, entry): idx
+                        for idx, entry in enumerate(batch)
+                    }
+                    for future in as_completed(future_to_idx):
+                        idx = future_to_idx[future]
+                        batch_results[idx] = future.result()
+
+                # Walk results in channel order (newest first) so cutoff logic is correct.
+                for result in batch_results:
+                    if result is None:
+                        continue
+                    if result['upload_date'] < since_date:
+                        logger.info(
+                            f"Reached video from {result['upload_date']} "
+                            f"(before cutoff {since_date}), stopping"
+                        )
+                        done = True
+                        break
+                    videos.append(result)
                     if limit and len(videos) >= limit:
+                        done = True
                         break
 
             logger.info(f"Returning {len(videos)} videos since {since_date}")
