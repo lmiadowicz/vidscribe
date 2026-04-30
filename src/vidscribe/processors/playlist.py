@@ -66,7 +66,6 @@ class PlaylistProcessor:
         """
         logger.info(f"Processing playlist: {playlist_url}")
 
-        # Get all video URLs
         video_urls = self.downloader.get_playlist_videos(playlist_url)
 
         if not video_urls:
@@ -76,8 +75,8 @@ class PlaylistProcessor:
         self.stats["total_videos"] = len(video_urls)
         console.print(f"[cyan]Found {len(video_urls)} videos to process[/cyan]")
 
-        # Process videos and save to CSV
-        self._process_video_list(video_urls, output_csv)
+        videos = [{'url': u, 'upload_date': '', 'title': ''} for u in video_urls]
+        self._process_video_list(videos, output_csv)
 
         # Print summary
         self._print_summary()
@@ -86,7 +85,8 @@ class PlaylistProcessor:
         self,
         channel_url: str,
         output_csv: str,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
+        since_date: Optional[str] = None,
     ) -> None:
         """
         Process all videos from a YouTube channel.
@@ -95,38 +95,33 @@ class PlaylistProcessor:
             channel_url: YouTube channel URL
             output_csv: Path to output CSV file
             limit: Maximum number of videos to process
+            since_date: Only process videos uploaded on or after this date (YYYYMMDD)
         """
         logger.info(f"Processing channel: {channel_url}")
 
-        # Get all video URLs
-        video_urls = self.downloader.get_channel_videos(channel_url, limit=limit)
+        videos = self.downloader.get_channel_videos(channel_url, limit=limit, since_date=since_date)
 
-        if not video_urls:
+        if not videos:
             console.print("[yellow]No videos found in channel[/yellow]")
             return
 
-        self.stats["total_videos"] = len(video_urls)
-        console.print(f"[cyan]Found {len(video_urls)} videos to process[/cyan]")
+        self.stats["total_videos"] = len(videos)
+        console.print(f"[cyan]Found {len(videos)} videos to process[/cyan]")
 
-        # Process videos and save to CSV
-        self._process_video_list(video_urls, output_csv)
-
-        # Print summary
+        self._process_video_list(videos, output_csv)
         self._print_summary()
 
-    def _process_video_list(self, video_urls: List[str], output_csv: str) -> None:
+    def _process_video_list(self, videos: List[Dict[str, Any]], output_csv: str) -> None:
         """
-        Process a list of video URLs and save to CSV.
+        Process a list of video metadata dicts and save to CSV.
 
         Args:
-            video_urls: List of YouTube video URLs
+            videos: List of dicts with keys: url, upload_date, title
             output_csv: Path to output CSV file
         """
-        # Prepare CSV file
         csv_path = Path(output_csv)
         csv_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Check if file exists to determine if we need to write headers
         file_exists = csv_path.exists()
 
         with open(csv_path, "a" if file_exists else "w", newline="", encoding="utf-8") as csvfile:
@@ -134,6 +129,7 @@ class PlaylistProcessor:
                 "Index",
                 "Title",
                 "Video Link",
+                "Publish Date",
                 "Video Length (seconds)",
                 "Transcription Time (seconds)",
                 "Transcription",
@@ -144,7 +140,6 @@ class PlaylistProcessor:
             if not file_exists:
                 writer.writeheader()
 
-            # Process each video with progress bar
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -154,18 +149,17 @@ class PlaylistProcessor:
             ) as progress:
                 task = progress.add_task(
                     "[cyan]Processing videos...",
-                    total=len(video_urls)
+                    total=len(videos)
                 )
 
-                for i, url in enumerate(video_urls, 1):
-                    progress.update(task, description=f"[cyan]Processing video {i}/{len(video_urls)}")
+                for i, video_meta in enumerate(videos, 1):
+                    url = video_meta['url']
+                    progress.update(task, description=f"[cyan]Processing video {i}/{len(videos)}")
 
                     try:
-                        # Process single video
-                        result = self._process_single_video(url, i)
+                        result = self._process_single_video(url, i, video_meta.get('upload_date', ''))
 
                         if result:
-                            # Write to CSV
                             writer.writerow(result)
                             csvfile.flush()
                             self.stats["processed"] += 1
@@ -181,25 +175,24 @@ class PlaylistProcessor:
 
                     progress.advance(task)
 
-                    # Brief pause to avoid overwhelming the API
-                    if i < len(video_urls):
+                    if i < len(videos):
                         time.sleep(1)
 
         console.print(f"\n[green]✓[/green] Transcriptions saved to: {csv_path}")
 
-    def _process_single_video(self, url: str, index: int) -> Optional[Dict[str, Any]]:
+    def _process_single_video(self, url: str, index: int, upload_date: str = '') -> Optional[Dict[str, Any]]:
         """
         Process a single video.
 
         Args:
             url: YouTube video URL
             index: Video index number
+            upload_date: Pre-fetched publish date (YYYYMMDD) from channel listing
 
         Returns:
             Dictionary with video data or None if failed
         """
         try:
-            # Get video info
             video_info = self.downloader.get_video_info(url)
             if not video_info:
                 logger.error(f"Failed to get info for: {url}")
@@ -207,28 +200,27 @@ class PlaylistProcessor:
 
             console.print(f"  [dim]Title: {video_info['title']}[/dim]")
 
-            # Download video
             audio_path = self.downloader.download_video(url)
             if not audio_path:
                 logger.error(f"Failed to download: {url}")
                 return None
 
-            # Transcribe
             result = self.engine.transcribe_audio(audio_path)
 
-            # Update stats
             self.stats["total_duration"] += video_info.get("duration", 0)
             self.stats["total_transcription_time"] += result.get("transcription_time", 0)
 
-            # Clean up audio file if not keeping
             if not self.keep_audio and os.path.exists(audio_path):
                 os.remove(audio_path)
 
-            # Return data for CSV
+            # Prefer the pre-fetched date; fall back to what get_video_info returns
+            pub_date = upload_date or video_info.get("publish_date", "")
+
             return {
                 "Index": index,
                 "Title": video_info["title"],
                 "Video Link": url,
+                "Publish Date": pub_date,
                 "Video Length (seconds)": video_info.get("duration", 0),
                 "Transcription Time (seconds)": result.get("transcription_time", 0),
                 "Transcription": result["text"],

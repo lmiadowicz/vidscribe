@@ -2,6 +2,7 @@
 
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -314,6 +315,12 @@ def transcribe(
     is_flag=True,
     help="Keep downloaded audio files"
 )
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help="Only process videos uploaded on or after this date (YYYY-MM-DD)"
+)
 @click.pass_context
 def playlist(
     ctx: click.Context,
@@ -322,7 +329,8 @@ def playlist(
     model: str,
     use_mlx: Optional[bool],
     limit: Optional[int],
-    keep_audio: bool
+    keep_audio: bool,
+    since: Optional[str],
 ) -> None:
     """
     \b
@@ -374,6 +382,14 @@ def playlist(
         console.print(f"[red]Invalid URL: {e}[/red]")
         sys.exit(1)
 
+    since_date = None
+    if since:
+        try:
+            since_date = datetime.strptime(since, "%Y-%m-%d").strftime("%Y%m%d")
+        except ValueError:
+            console.print("[red]Invalid --since date format. Use YYYY-MM-DD (e.g. 2024-01-01)[/red]")
+            sys.exit(1)
+
     # Initialize processor
     processor = PlaylistProcessor(model_size=model, keep_audio=keep_audio, use_mlx=use_mlx)
 
@@ -383,7 +399,9 @@ def playlist(
         processor.process_playlist(url, output)
     else:
         console.print(f"[cyan]Processing channel...[/cyan]")
-        processor.process_channel(url, output, limit=limit)
+        if since_date:
+            console.print(f"[cyan]Filtering videos since {since}...[/cyan]")
+        processor.process_channel(url, output, limit=limit, since_date=since_date)
 
     console.print(f"[green]✓[/green] Transcriptions saved to: {output}")
 

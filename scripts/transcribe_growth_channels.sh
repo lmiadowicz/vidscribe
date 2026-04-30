@@ -9,6 +9,7 @@ MODEL="${MODEL:-base}"        # override: MODEL=small bash ...
 LIMIT="${LIMIT:-}"            # override: LIMIT=50 bash ... (empty = all videos)
 OUTPUT_DIR="${OUTPUT_DIR:-./channel_transcriptions}"
 USE_MLX="${USE_MLX:-}"        # set USE_MLX=1 to enable Apple Silicon acceleration
+SINCE="${SINCE:-$(date -v-2y -v-6m +%Y-%m-%d)}"  # override: SINCE=2024-01-01 bash ... (only videos on/after date)
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -27,11 +28,14 @@ run_channel() {
   [[ -n "$USE_MLX" ]] && mlx_flag="--use-mlx"
   local limit_flag=""
   [[ -n "$LIMIT" ]] && limit_flag="--limit $LIMIT"
+  local since_flag=""
+  [[ -n "$SINCE" ]] && since_flag="--since $SINCE"
 
   if vidscribe playlist "$url" \
     --output "$output" \
     --model "$MODEL" \
     $limit_flag \
+    $since_flag \
     $mlx_flag; then
     echo "    Done: $output"
   else

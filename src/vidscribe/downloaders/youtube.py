@@ -196,16 +196,22 @@ class YouTubeDownloader:
             logger.error(f"Error fetching playlist: {e}")
             return []
 
-    def get_channel_videos(self, channel_url: str, limit: Optional[int] = None) -> List[str]:
+    def get_channel_videos(
+        self,
+        channel_url: str,
+        limit: Optional[int] = None,
+        since_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """
-        Get all video URLs from a YouTube channel.
+        Get video metadata from a YouTube channel.
 
         Args:
             channel_url: YouTube channel URL
-            limit: Maximum number of videos to fetch (None for all)
+            limit: Maximum number of videos to return after date filtering (None for all)
+            since_date: Only include videos uploaded on or after this date (YYYYMMDD)
 
         Returns:
-            List of video URLs
+            List of dicts with keys: url, upload_date, title
         """
         logger.info(f"Fetching channel: {channel_url}")
 
@@ -225,14 +231,40 @@ class YouTubeDownloader:
                 if 'entries' not in info:
                     logger.error("No entries found in channel")
                     return []
-                video_urls = [
-                    f"https://www.youtube.com/watch?v={entry['id']}"
-                    for entry in info['entries'] if entry
+                entries = [e for e in info['entries'] if e]
+                logger.info(f"Fetched {len(entries)} total videos from channel")
+
+                if since_date:
+                    filtered = []
+                    skipped_old = 0
+                    skipped_no_date = 0
+                    for entry in entries:
+                        upload_date = entry.get('upload_date')
+                        if not upload_date:
+                            # Cannot determine publish date — exclude to avoid processing old content
+                            skipped_no_date += 1
+                        elif upload_date >= since_date:
+                            filtered.append(entry)
+                        else:
+                            skipped_old += 1
+                    logger.info(
+                        f"Date filter ({since_date}): kept {len(filtered)}, "
+                        f"skipped {skipped_old} older, {skipped_no_date} without date"
+                    )
+                    entries = filtered
+
+                videos = [
+                    {
+                        'url': f"https://www.youtube.com/watch?v={entry['id']}",
+                        'upload_date': entry.get('upload_date', ''),
+                        'title': entry.get('title', ''),
+                    }
+                    for entry in entries
                 ]
                 if limit:
-                    video_urls = video_urls[:limit]
-                logger.info(f"Found {len(video_urls)} videos in channel")
-                return video_urls
+                    videos = videos[:limit]
+                logger.info(f"Returning {len(videos)} videos")
+                return videos
         except Exception as e:
             logger.error(f"Error fetching channel: {e}")
             return []
