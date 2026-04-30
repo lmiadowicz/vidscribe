@@ -153,6 +153,18 @@ def cli(ctx: click.Context, version: bool, verbose: bool, config: Optional[str])
     is_flag=True,
     help="Keep downloaded audio files"
 )
+@click.option(
+    "--cookies-from-browser",
+    type=str,
+    default=None,
+    help="Browser to pull cookies from to bypass bot detection (e.g. chrome, firefox, safari)"
+)
+@click.option(
+    "--cookies-file",
+    type=click.Path(exists=True),
+    default=None,
+    help="Path to a Netscape-format cookies file"
+)
 @click.pass_context
 def transcribe(
     ctx: click.Context,
@@ -163,7 +175,9 @@ def transcribe(
     format: str,
     language: Optional[str],
     task: str,
-    keep_audio: bool
+    keep_audio: bool,
+    cookies_from_browser: Optional[str],
+    cookies_file: Optional[str],
 ) -> None:
     """
     \b
@@ -224,7 +238,11 @@ def transcribe(
         # Check if input is a YouTube URL
         if is_youtube_url(input):
             status.update("[bold yellow]Downloading from YouTube...")
-            downloader = YouTubeDownloader(keep_files=keep_audio)
+            downloader = YouTubeDownloader(
+                keep_files=keep_audio,
+                cookies_from_browser=cookies_from_browser,
+                cookies_file=cookies_file,
+            )
 
             # Get video info
             video_info = downloader.get_video_info(input)
@@ -321,6 +339,18 @@ def transcribe(
     default=None,
     help="Only process videos uploaded on or after this date (YYYY-MM-DD)"
 )
+@click.option(
+    "--cookies-from-browser",
+    type=str,
+    default=None,
+    help="Browser to pull cookies from to bypass bot detection (e.g. chrome, firefox, safari)"
+)
+@click.option(
+    "--cookies-file",
+    type=click.Path(exists=True),
+    default=None,
+    help="Path to a Netscape-format cookies file"
+)
 @click.pass_context
 def playlist(
     ctx: click.Context,
@@ -331,6 +361,8 @@ def playlist(
     limit: Optional[int],
     keep_audio: bool,
     since: Optional[str],
+    cookies_from_browser: Optional[str],
+    cookies_file: Optional[str],
 ) -> None:
     """
     \b
@@ -391,7 +423,13 @@ def playlist(
             sys.exit(1)
 
     # Initialize processor
-    processor = PlaylistProcessor(model_size=model, keep_audio=keep_audio, use_mlx=use_mlx)
+    processor = PlaylistProcessor(
+        model_size=model,
+        keep_audio=keep_audio,
+        use_mlx=use_mlx,
+        cookies_from_browser=cookies_from_browser,
+        cookies_file=cookies_file,
+    )
 
     # Determine if it's a playlist or channel
     if "playlist" in url or "list=" in url:

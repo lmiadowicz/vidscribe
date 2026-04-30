@@ -19,18 +19,37 @@ logger = logging.getLogger(__name__)
 class YouTubeDownloader:
     """Handles YouTube video downloading and conversion."""
 
-    def __init__(self, output_dir: Optional[str] = None, keep_files: bool = False):
+    def __init__(
+        self,
+        output_dir: Optional[str] = None,
+        keep_files: bool = False,
+        cookies_from_browser: Optional[str] = None,
+        cookies_file: Optional[str] = None,
+    ):
         """
         Initialize the downloader.
 
         Args:
             output_dir: Directory to save downloaded files (uses temp dir if None)
             keep_files: Whether to keep downloaded files after processing
+            cookies_from_browser: Browser name to pull cookies from (e.g. "chrome", "firefox", "safari")
+            cookies_file: Path to a Netscape-format cookies file
         """
         self.output_dir = output_dir or tempfile.gettempdir()
         self.keep_files = keep_files
+        self.cookies_from_browser = cookies_from_browser
+        self.cookies_file = cookies_file
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         logger.info(f"Downloader initialized with output_dir: {self.output_dir}")
+
+    def _auth_opts(self) -> Dict[str, Any]:
+        """Return yt-dlp cookie options based on configured auth."""
+        opts: Dict[str, Any] = {}
+        if self.cookies_from_browser:
+            opts['cookiesfrombrowser'] = (self.cookies_from_browser,)
+        elif self.cookies_file:
+            opts['cookiefile'] = self.cookies_file
+        return opts
 
     def download_video(self, url: str, output_filename: Optional[str] = None) -> Optional[str]:
         """
@@ -56,6 +75,7 @@ class YouTubeDownloader:
                 'audioquality': '192',
                 'quiet': True,
                 'no_warnings': True,
+                **self._auth_opts(),
             }
 
             # Use custom filename if provided
@@ -66,6 +86,7 @@ class YouTubeDownloader:
             ydl_opts_info = {
                 'quiet': True,
                 'no_warnings': True,
+                **self._auth_opts(),
             }
             
             with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
@@ -138,12 +159,13 @@ class YouTubeDownloader:
         """
         try:
             validate_youtube_url(url)
-            
+
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
+                **self._auth_opts(),
             }
-            
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 
@@ -179,8 +201,9 @@ class YouTubeDownloader:
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': True,
+                **self._auth_opts(),
             }
-            
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(playlist_url, download=False)
                 
@@ -227,6 +250,7 @@ class YouTubeDownloader:
                 'no_warnings': True,
                 'extract_flat': True,
                 'lazy_playlist': False,
+                **self._auth_opts(),
             }
             with yt_dlp.YoutubeDL(flat_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -279,6 +303,7 @@ class YouTubeDownloader:
                 'quiet': True,
                 'no_warnings': True,
                 'ignoreerrors': True,
+                **self._auth_opts(),
             }
 
             def _fetch_meta(entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -301,8 +326,9 @@ class YouTubeDownloader:
 
             # Process in batches so we can short-circuit once we've passed the cutoff.
             # Channels are newest-first, so once a batch contains only old videos we stop.
-            BATCH_SIZE = 20
-            MAX_WORKERS = 8
+            # Keep concurrency low to avoid YouTube bot detection.
+            BATCH_SIZE = 10
+            MAX_WORKERS = 3
             videos: List[Dict[str, Any]] = []
             done = False
 

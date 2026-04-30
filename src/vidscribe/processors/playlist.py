@@ -27,7 +27,9 @@ class PlaylistProcessor:
         model_size: str = "base",
         keep_audio: bool = False,
         output_dir: Optional[str] = None,
-        use_mlx: Optional[bool] = None
+        use_mlx: Optional[bool] = None,
+        cookies_from_browser: Optional[str] = None,
+        cookies_file: Optional[str] = None,
     ):
         """
         Initialize the playlist processor.
@@ -37,13 +39,20 @@ class PlaylistProcessor:
             keep_audio: Keep downloaded audio files
             output_dir: Directory for temporary files
             use_mlx: Force MLX usage (True), disable MLX (False), or auto-detect (None)
+            cookies_from_browser: Browser name to pull cookies from (e.g. "chrome", "firefox")
+            cookies_file: Path to a Netscape-format cookies file
         """
         self.model_size = model_size
         self.keep_audio = keep_audio
         self.output_dir = output_dir
 
         # Initialize components
-        self.downloader = YouTubeDownloader(output_dir=output_dir, keep_files=keep_audio)
+        self.downloader = YouTubeDownloader(
+            output_dir=output_dir,
+            keep_files=keep_audio,
+            cookies_from_browser=cookies_from_browser,
+            cookies_file=cookies_file,
+        )
         self.engine = TranscriptionEngine(model_size=model_size, use_mlx=use_mlx)
 
         # Track processing stats
