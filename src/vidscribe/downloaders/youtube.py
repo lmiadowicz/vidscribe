@@ -1,5 +1,6 @@
 """YouTube video downloader module."""
 
+import http.cookiejar
 import logging
 import os
 import tempfile
@@ -39,6 +40,11 @@ class YouTubeDownloader:
         self.keep_files = keep_files
         self.cookies_from_browser = cookies_from_browser
         self.cookies_file = cookies_file
+        self._cookie_jar: Optional[http.cookiejar.CookieJar] = None
+        if cookies_file:
+            jar = http.cookiejar.MozillaCookieJar(cookies_file)
+            jar.load(ignore_discard=True, ignore_expires=True)
+            self._cookie_jar = jar
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         logger.info(f"Downloader initialized with output_dir: {self.output_dir}")
 
@@ -47,8 +53,8 @@ class YouTubeDownloader:
         opts: Dict[str, Any] = {}
         if self.cookies_from_browser:
             opts['cookiesfrombrowser'] = (self.cookies_from_browser,)
-        elif self.cookies_file:
-            opts['cookiefile'] = self.cookies_file
+        elif self._cookie_jar is not None:
+            opts['cookiejar'] = self._cookie_jar
         return opts
 
     def download_video(self, url: str, output_filename: Optional[str] = None) -> Optional[str]:
