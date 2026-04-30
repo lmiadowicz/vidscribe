@@ -75,6 +75,9 @@ class YouTubeDownloader:
                 'audioquality': '192',
                 'quiet': True,
                 'no_warnings': True,
+                # Allow yt-dlp to fetch the remote JS challenge solver (requires deno/node)
+                'allow_unplayable_formats': False,
+                'remote_components': 'ejs:github',
                 **self._auth_opts(),
             }
 
@@ -86,6 +89,7 @@ class YouTubeDownloader:
             ydl_opts_info = {
                 'quiet': True,
                 'no_warnings': True,
+                'remote_components': 'ejs:github',
                 **self._auth_opts(),
             }
             
@@ -163,12 +167,13 @@ class YouTubeDownloader:
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
+                'remote_components': 'ejs:github',
                 **self._auth_opts(),
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                
+
                 return {
                     "title": info.get('title'),
                     "duration": info.get('duration'),
@@ -303,6 +308,7 @@ class YouTubeDownloader:
                 'quiet': True,
                 'no_warnings': True,
                 'ignoreerrors': True,
+                'remote_components': 'ejs:github',
                 **self._auth_opts(),
             }
 

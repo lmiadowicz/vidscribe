@@ -10,6 +10,7 @@ LIMIT="${LIMIT:-}"            # override: LIMIT=50 bash ... (empty = all videos)
 OUTPUT_DIR="${OUTPUT_DIR:-./channel_transcriptions}"
 USE_MLX="${USE_MLX:-}"        # set USE_MLX=1 to enable Apple Silicon acceleration
 SINCE="${SINCE:-$(date -v-2y -v-6m +%Y-%m-%d)}"  # override: SINCE=2024-01-01 bash ... (only videos on/after date)
+COOKIES_FROM_BROWSER="${COOKIES_FROM_BROWSER:-}"  # override: COOKIES_FROM_BROWSER=chrome bash ... (safari doesn't work on macOS due to App Sandbox)
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -30,13 +31,16 @@ run_channel() {
   [[ -n "$LIMIT" ]] && limit_flag="--limit $LIMIT"
   local since_flag=""
   [[ -n "$SINCE" ]] && since_flag="--since $SINCE"
+  local cookies_flag=""
+  [[ -n "$COOKIES_FROM_BROWSER" ]] && cookies_flag="--cookies-from-browser $COOKIES_FROM_BROWSER"
 
   if vidscribe playlist "$url" \
     --output "$output" \
     --model "$MODEL" \
     $limit_flag \
     $since_flag \
-    $mlx_flag; then
+    $mlx_flag \
+    $cookies_flag; then
     echo "    Done: $output"
   else
     echo "    SKIPPED: $name failed (channel may not exist or is unavailable)"
