@@ -265,8 +265,8 @@ class YouTubeDownloader:
             }
             with yt_dlp.YoutubeDL(flat_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                if 'entries' not in info:
-                    logger.error("No entries found in channel")
+                if not info or 'entries' not in info:
+                    logger.warning(f"Channel not found or has no videos: {channel_url}")
                     return []
                 flat_entries = [e for e in info['entries'] if e]
                 logger.info(f"Fetched {len(flat_entries)} total videos from channel")

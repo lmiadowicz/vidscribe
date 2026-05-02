@@ -49,13 +49,15 @@ run_channel() {
   local mlx_flag=""
   [[ -n "$USE_MLX" ]] && mlx_flag="--use-mlx"
 
-  vidscribe playlist "$url" \
+  if vidscribe playlist "$url" \
     --output "$output" \
     --model "$MODEL" \
     --since "$SINCE" \
-    $mlx_flag
-
-  echo "    Done: $output"
+    $mlx_flag; then
+    echo "    Done: $output"
+  else
+    echo "    WARN: [$name] failed (channel may not exist or be unavailable) — skipping"
+  fi
 }
 
 # ── App Growth / ASO / UA ──────────────────────────────────────────────────────
