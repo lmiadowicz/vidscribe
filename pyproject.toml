@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Łukasz Miądowicz", email = "l.miadowicz@gmail.com"},
 ]
 keywords = ["transcription", "youtube", "whisper", "video", "audio", "cli"]
 classifiers = [
@@ -58,10 +58,10 @@ dev = [
 vidscribe = "vidscribe.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/vidscribe"
-Documentation = "https://github.com/yourusername/vidscribe/docs"
-Repository = "https://github.com/yourusername/vidscribe"
-Issues = "https://github.com/yourusername/vidscribe/issues"
+Homepage = "https://github.com/lmiadowicz/vidscribe"
+Documentation = "https://github.com/lmiadowicz/vidscribe"
+Repository = "https://github.com/lmiadowicz/vidscribe"
+Issues = "https://github.com/lmiadowicz/vidscribe/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

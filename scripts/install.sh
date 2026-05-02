@@ -30,9 +30,9 @@ else
     fi
 fi
 
-# Install Vidscribe
+# Install Vidscribe from source
 echo "📦 Installing Vidscribe..."
-pip install vidscribe
+pip install -e .
 
 echo "🎉 Installation complete!"
 echo ""
@@ -40,4 +40,4 @@ echo "Quick start:"
 echo "  vidscribe transcribe 'https://www.youtube.com/watch?v=VIDEO_ID'"
 echo "  vidscribe --help"
 echo ""
-echo "For more information, visit: https://github.com/yourusername/vidscribe"
+echo "For more information, visit: https://github.com/lmiadowicz/vidscribe"

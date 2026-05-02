@@ -12,6 +12,24 @@ USE_MLX="${USE_MLX:-}"        # set USE_MLX=1 to enable Apple Silicon accelerati
 
 mkdir -p "$OUTPUT_DIR"
 
+# Returns 0 (true) if the CSV already contains videos going back to $since_date,
+# meaning no new fetching is needed for this channel.
+channel_covered() {
+  local csv="$1"
+  local since="$2"  # YYYY-MM-DD
+  [[ -f "$csv" ]] || return 1
+  python3 - "$csv" "$since" <<'EOF'
+import sys, csv
+csv_file, since = sys.argv[1], sys.argv[2].replace('-', '')
+dates = [
+    row['Publish Date'].strip()
+    for row in csv.DictReader(open(csv_file, newline='', encoding='utf-8'))
+    if len(row.get('Publish Date', '').strip()) == 8 and row['Publish Date'].strip().isdigit()
+]
+sys.exit(0 if dates and min(dates) <= since else 1)
+EOF
+}
+
 run_channel() {
   local name="$1"
   local url="$2"
@@ -20,6 +38,11 @@ run_channel() {
   local output="$OUTPUT_DIR/${slug}.csv"
 
   echo ""
+  if channel_covered "$output" "$SINCE"; then
+    echo ">>> [$name] already fully covered — skipping"
+    return
+  fi
+
   echo ">>> [$name] $url"
   echo "    Output: $output"
 

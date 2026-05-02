@@ -133,6 +133,16 @@ class PlaylistProcessor:
 
         file_exists = csv_path.exists()
 
+        # Build set of already-processed URLs so re-runs skip completed videos.
+        done_urls: set = set()
+        if file_exists:
+            with open(csv_path, newline="", encoding="utf-8") as existing:
+                for row in csv.DictReader(existing):
+                    if row.get("Video Link"):
+                        done_urls.add(row["Video Link"])
+            if done_urls:
+                console.print(f"[dim]Resuming — skipping {len(done_urls)} already-processed video(s)[/dim]")
+
         with open(csv_path, "a" if file_exists else "w", newline="", encoding="utf-8") as csvfile:
             fieldnames = [
                 "Index",
@@ -164,6 +174,11 @@ class PlaylistProcessor:
                 for i, video_meta in enumerate(videos, 1):
                     url = video_meta['url']
                     progress.update(task, description=f"[cyan]Processing video {i}/{len(videos)}")
+
+                    if url in done_urls:
+                        self.stats["skipped"] += 1
+                        progress.advance(task)
+                        continue
 
                     try:
                         result = self._process_single_video(url, i, video_meta.get('upload_date', ''))
@@ -201,6 +216,7 @@ class PlaylistProcessor:
         Returns:
             Dictionary with video data or None if failed
         """
+        audio_path = None
         try:
             video_info = self.downloader.get_video_info(url)
             if not video_info:
@@ -219,9 +235,6 @@ class PlaylistProcessor:
             self.stats["total_duration"] += video_info.get("duration", 0)
             self.stats["total_transcription_time"] += result.get("transcription_time", 0)
 
-            if not self.keep_audio and os.path.exists(audio_path):
-                os.remove(audio_path)
-
             # Prefer the pre-fetched date; fall back to what get_video_info returns
             pub_date = upload_date or video_info.get("publish_date", "")
 
@@ -239,6 +252,9 @@ class PlaylistProcessor:
         except Exception as e:
             logger.error(f"Error processing video {url}: {e}")
             return None
+        finally:
+            if not self.keep_audio and audio_path and os.path.exists(audio_path):
+                os.remove(audio_path)
 
     def _print_summary(self) -> None:
         """Print processing summary."""
@@ -250,6 +266,8 @@ class PlaylistProcessor:
         table.add_row("Total videos", str(self.stats["total_videos"]))
         table.add_row("Successfully processed", f"[green]{self.stats['processed']}[/green]")
         table.add_row("Failed", f"[red]{self.stats['failed']}[/red]")
+        if self.stats["skipped"]:
+            table.add_row("Skipped (already done)", f"[dim]{self.stats['skipped']}[/dim]")
 
         if self.stats["total_duration"] > 0:
             total_duration_min = self.stats["total_duration"] / 60
